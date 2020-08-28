@@ -6,6 +6,7 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine.InputSystem;
 
 namespace SimpleFileBrowser
 {
@@ -32,6 +33,47 @@ namespace SimpleFileBrowser
 			public Sprite icon;
 		}
 #pragma warning restore 0649
+
+        [Serializable]
+        public class DialogTexts
+        {
+            public string title = "";
+            public string confirm = "";
+            public string cancel = "";
+            public string hiddenFiles = "";
+            public string search = "";
+        }
+ 
+        public class SaveDialogTexts: DialogTexts
+        {
+            public SaveDialogTexts(
+                string title = "Save", string confirm="Save", string cancel="Cancel",
+                string hiddenFiles = "Show hidden files", string search = "Search..."
+            )
+            {
+                this.title = title;
+                this.confirm = confirm;
+                this.cancel = cancel;
+                this.hiddenFiles = hiddenFiles;
+                this.search = search;
+            }
+        }
+        
+        public class LoadDialogTexts: DialogTexts
+        {
+            public LoadDialogTexts(
+                string title = "Load", string confirm="Load", string cancel="Cancel",
+                string hiddenFiles = "Show hidden files", string search = "Search..."
+            )
+            {
+                this.title = title;
+                this.confirm = confirm;
+                this.cancel = cancel;
+                this.hiddenFiles = hiddenFiles;
+                this.search = search;
+            }
+        }
+        
 		#endregion
 
 		#region Inner Classes
@@ -136,7 +178,7 @@ namespace SimpleFileBrowser
 			{
 				if( m_instance == null )
 				{
-					m_instance = Instantiate( Resources.Load<GameObject>( "SimpleFileBrowserCanvas" ) ).GetComponent<FileBrowser>();
+					m_instance = Instantiate( Resources.Load<GameObject>( "SimpleFileBrowserCanvas_NewInputSystem" ) ).GetComponent<FileBrowser>();
 					DontDestroyOnLoad( m_instance.gameObject );
 					m_instance.gameObject.SetActive( false );
 				}
@@ -144,6 +186,14 @@ namespace SimpleFileBrowser
 				return m_instance;
 			}
 		}
+
+#if UNITY_2019_3_OR_NEWER
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void InitOnPlayMode()
+        {
+            m_instance = null;
+        }
+#endif
 		#endregion
 
 		#region Variables
@@ -209,7 +259,16 @@ namespace SimpleFileBrowser
 		[SerializeField]
 		private Text titleText;
 
-		[SerializeField]
+        [SerializeField] 
+        private Text cancelText;
+
+        [SerializeField] 
+        private Text hiddenFilesText;
+
+        [SerializeField] 
+        private Text searchText;
+        
+        [SerializeField]
 		private Button backButton;
 
 		[SerializeField]
@@ -443,7 +502,26 @@ namespace SimpleFileBrowser
 			get { return submitButtonText.text; }
 			set { submitButtonText.text = value; }
 		}
-		#endregion
+
+        private string Cancel
+        {
+            get { return cancelText.text; }
+            set { cancelText.text = value; }
+        }
+
+        private string HiddenFile
+        {
+            get { return hiddenFilesText.text; }
+            set { hiddenFilesText.text = value; }
+        }
+
+        private string Search
+        {
+            get { return searchText.text; }
+            set { searchText.text = value; }
+        }
+
+        #endregion
 
 		#region Delegates
 		public delegate void OnSuccess( string[] paths );
@@ -929,7 +1007,7 @@ namespace SimpleFileBrowser
 				{
 #if UNITY_EDITOR || ( !UNITY_ANDROID && !UNITY_IOS )
 					// When Shift key is held, all items from the pivot item to the clicked item will be selected
-					if( Input.GetKey( KeyCode.LeftShift ) || Input.GetKey( KeyCode.RightShift ) )
+					if( Keyboard.current[Key.LeftShift].isPressed || Keyboard.current[Key.RightShift].isPressed )
 					{
 						multiSelectionPivotFileEntry = Mathf.Clamp( multiSelectionPivotFileEntry, 0, validFileEntries.Count - 1 );
 
@@ -949,7 +1027,7 @@ namespace SimpleFileBrowser
 
 						// When in toggle selection mode or Control key is held, individual items can be multi-selected
 #if UNITY_EDITOR || ( !UNITY_ANDROID && !UNITY_IOS )
-						if( m_multiSelectionToggleSelectionMode || Input.GetKey( KeyCode.LeftControl ) || Input.GetKey( KeyCode.RightControl ) )
+						if( m_multiSelectionToggleSelectionMode || Keyboard.current[Key.LeftCtrl].isPressed || Keyboard.current[Key.RightCtrl].isPressed )
 #else
 						if( m_multiSelectionToggleSelectionMode )
 #endif
@@ -1502,6 +1580,22 @@ namespace SimpleFileBrowser
 			return true;
 		}
 
+        public static bool ShowSaveDialog(OnSuccess onSuccess, OnCancel onCancel, DialogTexts texts,
+            bool folderMode = false, bool allowMultiSelection = false, string initialPath = null)
+        {
+            if (texts == null)
+            {
+                return ShowSaveDialog(onSuccess, onCancel, folderMode, allowMultiSelection, initialPath);
+            }
+
+            Instance.Cancel = texts.cancel;
+            Instance.HiddenFile = texts.hiddenFiles;
+            Instance.Search = texts.search;
+
+            return ShowSaveDialog(onSuccess, onCancel, folderMode, allowMultiSelection, initialPath, texts.title,
+                texts.confirm);
+        }
+        
 		public static bool ShowLoadDialog( OnSuccess onSuccess, OnCancel onCancel,
 										   bool folderMode = false, bool allowMultiSelection = false, string initialPath = null,
 										   string title = "Load", string loadButtonText = "Select" )
@@ -1525,6 +1619,22 @@ namespace SimpleFileBrowser
 
 			return true;
 		}
+        
+        public static bool ShowLoadDialog(OnSuccess onSuccess, OnCancel onCancel, DialogTexts texts,
+            bool folderMode = false, bool allowMultiSelection = false, string initialPath = null)
+        {
+            if (texts == null)
+            {
+                return ShowLoadDialog(onSuccess, onCancel, folderMode, allowMultiSelection, initialPath);
+            }
+
+            Instance.Cancel = texts.cancel;
+            Instance.HiddenFile = texts.hiddenFiles;
+            Instance.Search = texts.search;
+
+            return ShowLoadDialog(onSuccess, onCancel, folderMode, allowMultiSelection, initialPath, texts.title,
+                texts.confirm);
+        }
 
 		public static void HideDialog( bool invokeCancelCallback = false )
 		{

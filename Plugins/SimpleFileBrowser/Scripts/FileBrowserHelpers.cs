@@ -23,7 +23,7 @@ namespace SimpleFileBrowser
 		public FileSystemEntry( FileSystemInfo fileInfo )
 		{
 			Path = fileInfo.FullName;
-			Name = fileInfo.Name;
+			Name = fileInfo.Name.Normalize();
 			Extension = fileInfo.Extension;
 			Attributes = fileInfo.Attributes;
 		}
